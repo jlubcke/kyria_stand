@@ -13,6 +13,10 @@ official bottom-plate DXF. Two parts in one print:
 
 No floor, no bottom. Prints upright with no supports.
 
+| `pattern = "none"` | `pattern = "hex"` | `pattern = "voronoi"` |
+| :---: | :---: | :---: |
+| ![plain walls](images/pattern_none.png) | ![hex pattern](images/pattern_hex.png) | ![voronoi pattern](images/pattern_voronoi.png) |
+
 ## Files
 
 - `kyria_stand.scad` – the model, all parameters at the top
@@ -20,6 +24,7 @@ No floor, no bottom. Prints upright with no supports.
 - `kyria_outline.scad` – coarse polyline of the outline, generated; guides the wall pattern
 - `dxf2chords.py` – regenerates `kyria_outline.scad` from the DXF (only needed if the DXF changes)
 - `build.sh` – renders `kyria_stand_left.stl`, `kyria_stand_right.stl` and PNG previews
+- `images/` – the renders above; regenerate with `./render_images.sh`
 - `kyria_stand_*.stl` – ready to slice
 
 ## Defaults
