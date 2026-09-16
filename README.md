@@ -27,14 +27,14 @@ No floor, no bottom. Prints upright with no supports.
 | parameter       | value  | meaning                                   |
 | --------------- | ------ | ----------------------------------------- |
 | `inner_height`  | 50 mm  | rim height at the inner (thumb/OLED) edge |
-| `lip`           | 4 mm   | collar wall above the plate               |
-| `collar_h`      | 11 mm  | total collar height, lip included         |
+| `lip`           | 6 mm   | collar wall above the plate               |
+| `collar_extra`  | 0 mm   | extra collar depth below the ledge chamfer|
 | `border`        | 1 mm   | collar overhang beyond the pedestal wall  |
 | `wall`          | 2 mm   | wall thickness                            |
 | `clearance`     | 0.4 mm | gap between case and pocket wall          |
-| `ledge_w`       | 2.5 mm | ledge width, inward from the pocket wall  |
-| `ledge_t`       | 2.5 mm | ledge thickness                           |
-| `chamfer_angle` | 60°    | slope of the ledge underside, vs the plate|
+| `ledge_w`       | 2 mm   | ledge width, inward from the pocket wall  |
+| `ledge_t`       | 1.5 mm | ledge thickness                           |
+| `chamfer_angle` | 57°    | slope of the ledge underside, vs the plate|
 | `pattern`       | "hex"  | wall cut-out: "hex" or "none"             |
 | `hex_size`      | 6 mm   | hole width, flat to flat                  |
 | `hex_strut`     | 1.6 mm | material left between holes               |
@@ -42,18 +42,20 @@ No floor, no bottom. Prints upright with no supports.
 | `pattern_top`   | 1.5 mm | solid margin below the ledge chamfer      |
 | `corner_margin` | 3 mm   | solid material either side of a corner    |
 
-Resulting tent angle is about 13.7°. Outer rim is about 11 mm tall.
-Footprint per half: roughly 164 × 119 mm. About 28 cm³ of plastic per half
-with the hex pattern.
+The tent angle follows from `inner_height`, `lip` and `ledge_t`: about 15°
+with the defaults. The ledge underside touches the desk at the outer edge, so
+the plate bottom sits about 1.5 mm above the desk there; whatever would hang
+below the desk is cut off. Collar height is derived, 10.6 mm with the
+defaults. Outer rim is about 7 mm tall. Footprint per half: roughly
+164 × 119 mm. About 27 cm³ of plastic per half with the hex pattern.
 
-`collar_h` must be at least `lip + ledge_t + ledge_w * tan(chamfer_angle)`
-(11 mm with the defaults) or the ledge chamfer gets truncated; the model
-prints a NOTE if so.
+Printed overhang of the ledge underside is `chamfer_angle` minus the tent
+angle, measured from horizontal. Keep that at 40° or more.
 
 The pattern is laid out on the "unrolled" wall (distance along the outline
 versus height) and cut through each chord of the outline along that chord's
-normal, so it flows continuously around the curves. Sharp corners, the desk
-band and the band under the ledge stay solid.
+normal, so it flows continuously around the curves. The holes run up to the
+collar, which clips the top row. Sharp corners and the desk band stay solid.
 
 Keep `ledge_w` at 3 mm or less: the case screw nearest the edge (top inner
 corner) is 5.3 mm in, and its head must clear the ledge. If your bottom plate
@@ -75,5 +77,5 @@ In the GUI, turn on "roof" under Preferences > Features.
 ## Printing
 
 Print upright, as modelled. The collar leans with the tent angle, the ledge
-underside slopes at 46–74° from horizontal, and the collar overhangs the
+underside slopes at 42–72° from horizontal, and the collar overhangs the
 pedestal by 1 mm. All of that prints without supports.

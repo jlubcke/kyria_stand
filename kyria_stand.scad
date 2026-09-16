@@ -22,23 +22,25 @@
 side = "right"; // ["left", "right"]
 
 inner_height  = 50;   // total height of the rim at the inner edge, above the desk (mm)
-lip           = 4;    // collar wall above the plate's resting plane (mm)
-collar_h      = 11;   // total collar height, lip included, measured along the keyboard (mm)
+lip           = 6;    // collar wall above the plate's resting plane (mm)
+collar_extra  = 0;    // extra collar depth below the ledge chamfer (mm); 0 = as short as possible
 border        = 1;    // how far the collar overhangs the pedestal wall (mm)
 wall          = 2;    // wall thickness, collar and pedestal (mm)
 clearance     = 0.4;  // gap between case outline and pocket wall, per side (mm)
-ledge_w       = 2.5;  // how far the ledge protrudes inward from the pocket wall (mm)
+ledge_w       = 2;    // how far the ledge protrudes inward from the pocket wall (mm)
                       // keep <= 3: the nearest case screw is 5.3 mm from the edge
-ledge_t       = 2.5;  // ledge thickness (mm)
-chamfer_angle = 60;   // slope of the ledge underside, relative to the plate (deg)
-outer_gap     = 0;    // lift of the collar's low corner off the desk (mm)
+ledge_t       = 1.5;  // ledge thickness (mm)
+chamfer_angle = 57;   // slope of the ledge underside, relative to the plate (deg)
+                      // printed overhang is chamfer_angle - tent angle from horizontal; keep >= 40
+outer_gap     = 0;    // lift of the ledge underside off the desk at the outer edge (mm)
 
 // Pedestal lightening pattern.
 pattern       = "hex"; // ["none", "hex"]
 hex_size      = 6;     // hole width, flat to flat (mm)
 hex_strut     = 1.6;   // material left between holes (mm)
 pattern_foot  = 3;     // solid band along the desk (mm)
-pattern_top   = 1.5;   // solid margin below the collar (mm)
+pattern_top   = 0;     // solid margin below the collar (mm); 0 = holes run up to the collar
+min_hole_h    = 1.5;   // drop holes the collar would cut down to less than this height (mm)
 corner_margin = 3;     // solid material either side of a sharp corner (mm)
 corner_deg    = 20;    // turn angle that counts as a sharp corner (deg)
 
@@ -56,33 +58,33 @@ $fn = 96;
 
 // ---------- Derived -------------------------------------------------------
 
-collar_below = collar_h - lip;                 // collar depth below the plate
 chamfer_h    = ledge_w * tan(chamfer_angle);   // height of the sloped underside
+collar_below = ledge_t + chamfer_h + collar_extra;   // collar depth below the plate
+collar_h     = lip + collar_below;
 
 // Tent angle: the rim reaches inner_height at the outer face of the inner
-// wall, and the collar's low outer corner sits on the desk (plus outer_gap).
+// wall, and the ledge underside touches the desk at the outer edge of the
+// pocket (plus outer_gap). Whatever hangs below the desk there is cut off.
 // Solves A*sin(a) + B*cos(a) = C.
 x_lo     = x_inner - clearance - wall;         // outer face of the inner wall
-x_hi_out = x_outer + clearance + wall;         // outer face of the outer wall
-A        = x_hi_out - x_lo;
-B        = collar_h;
+x_hi     = x_outer + clearance;                // pocket edge on the outer side
+A        = x_hi - x_lo;
+B        = ledge_t + lip;
 C        = inner_height - outer_gap;
 tent_deg = asin(C / sqrt(A * A + B * B)) - atan2(B, A);
 slope    = tan(tent_deg);
 
 // Keyboard frame: plate plane through (0, 0, c_top), rotated tent_deg about Y.
-c_top   = x_hi_out * sin(tent_deg) + collar_below * cos(tent_deg) + outer_gap;
+c_top   = x_hi * sin(tent_deg) + ledge_t * cos(tent_deg) + outer_gap;
 // Collar/pedestal joint plane, in world coords: z = c_joint - slope * x
 c_joint = c_top - collar_below / cos(tent_deg);
 
 echo(str("tent angle = ", tent_deg, " deg"));
-echo(str("outer rim height = ", collar_h * cos(tent_deg) + outer_gap,
-         " mm, inner rim height = ", inner_height, " mm"));
+echo(str("plate bottom above desk at the outer edge = ", ledge_t * cos(tent_deg) + outer_gap, " mm"));
+echo(str("collar height = ", collar_h, " mm; outer rim height = ",
+         (ledge_t + lip) * cos(tent_deg) + outer_gap, " mm, inner rim height = ", inner_height, " mm"));
 echo(str("ledge underside slope, world: ", chamfer_angle - tent_deg, " to ",
          chamfer_angle + tent_deg, " deg from horizontal"));
-if (collar_below < ledge_t + chamfer_h)
-    echo(str("NOTE: collar_h is too small for the ledge chamfer; it gets truncated by ",
-             ledge_t + chamfer_h - collar_below, " mm. Raise collar_h or lower chamfer_angle."));
 
 BIG = 1000;
 
@@ -190,7 +192,7 @@ module hex_strip(i) {
                     zc = pattern_foot + hex_r + j * pitch_z,
                     xw = P(i)[0] + sc * cos(ang))          // world x of the hole centre
                 if (sc > a - hex_size / 2 && sc < L - b + hex_size / 2
-                    && zc + 0.25 * hex_r < z_limit(xw))     // skip holes the top band would reduce to slivers
+                    && z_limit(xw) - (zc - hex_r) > min_hole_h)   // skip holes the collar would cut to slivers
                     translate([sc, zc]) rotate(30) circle(r = hex_r, $fn = 6);
         }
 }
