@@ -13,8 +13,8 @@ fi
 [ -n "$OPENSCAD" ] || { echo "openscad not found; set OPENSCAD=/path/to/openscad" >&2; exit 1; }
 
 # Manifold backend is much faster where available (2024+ nightlies).
-EXTRA=""
-if "$OPENSCAD" --help 2>&1 | grep -q -- '--backend'; then EXTRA="--backend=Manifold"; fi
+EXTRA="--enable=roof"
+if "$OPENSCAD" --help 2>&1 | grep -q -- '--backend'; then EXTRA="--backend=Manifold --enable=roof"; fi
 
 for side in left right; do
   out="kyria_stand_${side}.stl"

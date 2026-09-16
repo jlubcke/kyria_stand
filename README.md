@@ -1,8 +1,9 @@
 # Kyria tenting stand
 
-Open-shell tenting tray for a splitkb Kyria rev3 half: perimeter wall plus a
-sloped floor, no bottom. The case drops into the pocket. Modelled in OpenSCAD
-from the official bottom-plate DXF.
+Tenting stand for a splitkb Kyria rev3 half: a perimeter wall following the
+case outline with a small inward ledge the bottom plate rests on. No floor, no
+bottom. The ledge underside is sloped so it prints upright with no supports.
+Modelled in OpenSCAD from the official bottom-plate DXF.
 
 ## Files
 
@@ -13,16 +14,22 @@ from the official bottom-plate DXF.
 
 ## Defaults
 
-| parameter      | value  | meaning                                  |
-| -------------- | ------ | ---------------------------------------- |
-| `inner_height` | 50 mm  | rim height at the inner (thumb/OLED) edge |
-| `lip`          | 4 mm   | wall above the floor                     |
-| `wall`         | 2.5 mm | wall thickness                           |
-| `floor_t`      | 2.5 mm | floor thickness                          |
-| `clearance`    | 0.4 mm | gap between case and pocket wall         |
+| parameter       | value  | meaning                                   |
+| --------------- | ------ | ----------------------------------------- |
+| `inner_height`  | 50 mm  | rim height at the inner (thumb/OLED) edge |
+| `lip`           | 4 mm   | wall above the plate's resting plane      |
+| `wall`          | 2.5 mm | wall thickness                            |
+| `clearance`     | 0.4 mm | gap between case and pocket wall          |
+| `ledge_w`       | 2.5 mm | ledge width, inward from the pocket wall  |
+| `ledge_t`       | 3 mm   | ledge thickness                           |
+| `chamfer_angle` | 55°    | slope of the ledge underside              |
 
-Resulting tent angle is about 15°. Outer rim is 6.5 mm tall.
-Footprint per half: roughly 167 × 120 mm.
+Resulting tent angle is about 15°. Outer rim is 7 mm tall.
+Footprint per half: roughly 167 × 120 mm. About 40 cm³ of plastic per half.
+
+Keep `ledge_w` at 3 mm or less: the case screw nearest the edge (top inner
+corner) is 5.3 mm in, and its head must clear the ledge. If your bottom plate
+has rubber feet near the edge, check those too.
 
 `side = "right"` is the DXF as drawn (inner edge on -X, seen from above);
 `side = "left"` mirrors it. If the halves come out swapped, just swap the files.
@@ -33,10 +40,11 @@ Footprint per half: roughly 167 × 120 mm.
 ./build.sh
 ```
 
-Needs OpenSCAD on the PATH (`brew install --cask openscad@snapshot`).
+Needs OpenSCAD on the PATH (`brew install --cask openscad@snapshot`) and the
+experimental `roof()` feature, which `build.sh` enables with `--enable=roof`.
+In the GUI, turn on "roof" under Preferences > Features.
 
 ## Printing
 
-There is no bottom, so printed upright the floor is a ~15° roof over an open
-cavity and needs supports. Alternatives: print on its side standing on the long
-straight outer wall, or set `floor_t` thicker and accept supports.
+Print upright, as modelled. The ledge underside slopes at 49–59° from
+horizontal after the tilt, so no supports are needed.

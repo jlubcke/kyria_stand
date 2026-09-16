@@ -1,12 +1,13 @@
-// Tenting tray for a splitkb Kyria rev3 half.
+// Tenting stand for a splitkb Kyria rev3 half.
 //
-// An open shell: perimeter wall + sloped floor, no bottom. The keyboard case
-// drops into the pocket and rests on the floor. The inner (thumb/OLED) edge
-// is raised so each half is tented outward.
+// A perimeter wall following the case outline, with a small inward ledge the
+// bottom plate rests on. No floor, no bottom. The ledge has a sloped
+// underside so the part prints upright without any support material.
+// The inner (thumb/OLED) edge is raised so each half is tented outward.
 //
-// Render:  openscad -o kyria_stand_right.stl -D 'side="right"' kyria_stand.scad
-//          openscad -o kyria_stand_left.stl  -D 'side="left"'  kyria_stand.scad
-// or just run ./build.sh
+// Needs the experimental roof() feature:
+//   openscad --enable=roof -o kyria_stand_right.stl -D 'side="right"' kyria_stand.scad
+// or just run ./build.sh. In the GUI enable "roof" under Preferences > Features.
 
 // ---------- Parameters ----------------------------------------------------
 
@@ -14,12 +15,15 @@
 // half seen from above. "left" mirrors the whole model.
 side = "right"; // ["left", "right"]
 
-inner_height = 50;   // total height of the rim at the inner edge (mm)
-lip          = 4;    // how far the wall rises above the floor top (mm)
-wall         = 2.5;  // perimeter wall thickness (mm)
-floor_t      = 2.5;  // floor plate thickness, measured vertically (mm)
-clearance    = 0.4;  // gap between case outline and pocket wall, per side (mm)
-outer_gap    = 0;    // extra lift of the floor at the outer edge (mm), 0 = floor underside touches the desk
+inner_height  = 50;   // total height of the rim at the inner edge (mm)
+lip           = 4;    // how far the wall rises above the plate's resting plane (mm)
+wall          = 2.5;  // perimeter wall thickness (mm)
+clearance     = 0.4;  // gap between case outline and pocket wall, per side (mm)
+ledge_w       = 2.5;  // how far the ledge protrudes inward from the pocket wall (mm)
+                      // keep <= 3: the nearest case screw is 5.3 mm from the edge
+ledge_t       = 3;    // ledge thickness, measured vertically (mm)
+chamfer_angle = 55;   // slope of the ledge underside, from horizontal (deg)
+outer_gap     = 0;    // extra lift of the ledge at the outer edge (mm), 0 = ledge underside touches the desk
 
 dxf = "Kyria rev3 Bottom Plate - No Kerf.dxf";
 
@@ -31,20 +35,24 @@ $fn = 96;
 
 // ---------- Derived -------------------------------------------------------
 
+chamfer_h = ledge_w * tan(chamfer_angle);   // height of the sloped underside
+
 // The rim reaches inner_height at the outer face of the inner wall, and the
-// floor underside touches the desk at the outer edge of the pocket.
+// ledge underside touches the desk at the outer edge of the pocket.
 x_lo = x_inner - clearance - wall;   // outer face of the inner wall
 x_hi = x_outer + clearance;          // pocket edge on the outer side
-z_floor_outer = floor_t + outer_gap;
-z_floor_inner = inner_height - lip;
-slope = (z_floor_inner - z_floor_outer) / (x_hi - x_lo);   // dz per -dx
+z_top_outer = ledge_t + outer_gap;
+z_top_inner = inner_height - lip;
+slope = (z_top_inner - z_top_outer) / (x_hi - x_lo);   // dz per -dx
 tent_deg = atan(slope);
 
-// Floor-top plane: z(x) = c_floor - slope * x
-c_floor = z_floor_outer + slope * x_hi;
+// Plate resting plane (ledge top): z(x) = c_top - slope * x
+c_top = z_top_outer + slope * x_hi;
 
 echo(str("tent angle = ", tent_deg, " deg"));
-echo(str("outer rim height = ", z_floor_outer + lip, " mm, inner rim height = ", inner_height, " mm"));
+echo(str("outer rim height = ", z_top_outer + lip, " mm, inner rim height = ", inner_height, " mm"));
+echo(str("ledge underside slope after tilt: ", atan(tan(chamfer_angle) - slope), " to ",
+         atan(tan(chamfer_angle) + slope), " deg from horizontal"));
 
 BIG = 1000;
 
@@ -57,6 +65,7 @@ module plate_outline() {
 
 module pocket_profile() { offset(r = clearance) plate_outline(); }
 module outer_profile()  { offset(r = clearance + wall) plate_outline(); }
+module inside_ledge()   { offset(r = -ledge_w) pocket_profile(); }
 
 // ---------- Tilted half-spaces --------------------------------------------
 
@@ -78,7 +87,8 @@ module above(c) {
     tilted() translate([-BIG / 2, -BIG / 2, c]) cube([BIG, BIG, BIG]);
 }
 
-module prism(h = BIG) { linear_extrude(h) children(); }
+// Tall prism of a 2D profile, starting just below the desk so cuts go through.
+module prism(h = BIG) { translate([0, 0, -1]) linear_extrude(h + 1) children(); }
 
 // ---------- Solid ---------------------------------------------------------
 
@@ -86,19 +96,27 @@ module stand() {
     difference() {
         // Outer body: wall footprint, from the desk up to the rim plane.
         intersection() {
-            prism() outer_profile();
-            below(c_floor + lip);
+            linear_extrude(BIG) outer_profile();
+            below(c_top + lip);
         }
-        // Pocket: the case sits here, above the floor.
+        // Pocket: the case sits here, above the ledge.
         intersection() {
             prism() pocket_profile();
-            above(c_floor);
+            above(c_top);
         }
-        // Hollow under the floor (no bottom).
+        // Open middle, all the way through.
+        prism() inside_ledge();
+        // Open bottom, below the ledge's sloped underside.
         intersection() {
-            translate([0, 0, -1]) prism() pocket_profile();
-            below(c_floor - floor_t);
+            prism() pocket_profile();
+            below(c_top - ledge_t - chamfer_h);
         }
+        // Sloped underside of the ledge: roof() rises at 45 deg from the
+        // pocket outline; scaling z sets the chamfer angle. Everything above
+        // the ledge's inner edge is already open, so its top needs no clipping.
+        tilted() translate([0, 0, c_top - ledge_t - chamfer_h])
+            scale([1, 1, chamfer_h / ledge_w])
+                roof() pocket_profile();
     }
 }
 
