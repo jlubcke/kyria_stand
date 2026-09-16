@@ -29,9 +29,9 @@ outer_gap     = 0;    // extra lift of the ledge at the outer edge (mm), 0 = led
 pattern       = "hex"; // ["none", "hex"]
 hex_size      = 6;     // hole width, flat to flat (mm)
 hex_strut     = 1.6;   // material left between holes (mm)
-pattern_foot  = 3;     // solid band along the desk (mm)
-pattern_top   = 1.5;   // solid margin below the ledge's sloped underside (mm)
-corner_margin = 3;     // solid material either side of a sharp corner (mm)
+pattern_foot  = 1;     // solid band along the desk (mm)
+pattern_top   = 0.5;   // solid margin below the ledge's sloped underside (mm)
+corner_margin = 1;     // solid material either side of a sharp corner (mm)
 corner_deg    = 20;    // turn angle that counts as a sharp corner (deg)
 
 dxf = "Kyria rev3 Bottom Plate - No Kerf.dxf";
