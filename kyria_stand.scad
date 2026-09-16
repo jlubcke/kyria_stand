@@ -1,9 +1,15 @@
 // Tenting stand for a splitkb Kyria rev3 half.
 //
-// A perimeter wall following the case outline, with a small inward ledge the
-// bottom plate rests on. No floor, no bottom. The ledge has a sloped
-// underside so the part prints upright without any support material.
-// The inner (thumb/OLED) edge is raised so each half is tented outward.
+// Two parts, one print:
+//  * A collar in the keyboard's own frame: a wall perpendicular to the bottom
+//    plate, following the case outline, with a small inward ledge the plate
+//    rests on and a sloped underside below the ledge. The collar is tilted
+//    with the keyboard.
+//  * A pedestal below it with vertical walls, going straight down to the desk.
+//    Its outer face is set in by `border`, so the collar overhangs it slightly
+//    all around, as a design line. The pedestal carries the optional hex
+//    pattern.
+// No floor, no bottom. Prints upright without support.
 //
 // Needs the experimental roof() feature:
 //   openscad --enable=roof -o kyria_stand_right.stl -D 'side="right"' kyria_stand.scad
@@ -15,23 +21,25 @@
 // half seen from above. "left" mirrors the whole model.
 side = "right"; // ["left", "right"]
 
-inner_height  = 50;   // total height of the rim at the inner edge (mm)
-lip           = 4;    // how far the wall rises above the plate's resting plane (mm)
-wall          = 2;    // perimeter wall thickness (mm)
+inner_height  = 50;   // total height of the rim at the inner edge, above the desk (mm)
+lip           = 4;    // collar wall above the plate's resting plane (mm)
+collar_h      = 11;   // total collar height, lip included, measured along the keyboard (mm)
+border        = 1;    // how far the collar overhangs the pedestal wall (mm)
+wall          = 2;    // wall thickness, collar and pedestal (mm)
 clearance     = 0.4;  // gap between case outline and pocket wall, per side (mm)
 ledge_w       = 2.5;  // how far the ledge protrudes inward from the pocket wall (mm)
                       // keep <= 3: the nearest case screw is 5.3 mm from the edge
-ledge_t       = 3;    // ledge thickness, measured vertically (mm)
-chamfer_angle = 55;   // slope of the ledge underside, from horizontal (deg)
-outer_gap     = 0;    // extra lift of the ledge at the outer edge (mm), 0 = ledge underside touches the desk
+ledge_t       = 2.5;  // ledge thickness (mm)
+chamfer_angle = 60;   // slope of the ledge underside, relative to the plate (deg)
+outer_gap     = 0;    // lift of the collar's low corner off the desk (mm)
 
-// Wall lightening pattern.
+// Pedestal lightening pattern.
 pattern       = "hex"; // ["none", "hex"]
 hex_size      = 6;     // hole width, flat to flat (mm)
 hex_strut     = 1.6;   // material left between holes (mm)
-pattern_foot  = 1;     // solid band along the desk (mm)
-pattern_top   = 0.5;   // solid margin below the ledge's sloped underside (mm)
-corner_margin = 1;     // solid material either side of a sharp corner (mm)
+pattern_foot  = 3;     // solid band along the desk (mm)
+pattern_top   = 1.5;   // solid margin below the collar (mm)
+corner_margin = 3;     // solid material either side of a sharp corner (mm)
 corner_deg    = 20;    // turn angle that counts as a sharp corner (deg)
 
 dxf = "Kyria rev3 Bottom Plate - No Kerf.dxf";
@@ -48,24 +56,33 @@ $fn = 96;
 
 // ---------- Derived -------------------------------------------------------
 
-chamfer_h = ledge_w * tan(chamfer_angle);   // height of the sloped underside
+collar_below = collar_h - lip;                 // collar depth below the plate
+chamfer_h    = ledge_w * tan(chamfer_angle);   // height of the sloped underside
 
-// The rim reaches inner_height at the outer face of the inner wall, and the
-// ledge underside touches the desk at the outer edge of the pocket.
-x_lo = x_inner - clearance - wall;   // outer face of the inner wall
-x_hi = x_outer + clearance;          // pocket edge on the outer side
-z_top_outer = ledge_t + outer_gap;
-z_top_inner = inner_height - lip;
-slope = (z_top_inner - z_top_outer) / (x_hi - x_lo);   // dz per -dx
-tent_deg = atan(slope);
+// Tent angle: the rim reaches inner_height at the outer face of the inner
+// wall, and the collar's low outer corner sits on the desk (plus outer_gap).
+// Solves A*sin(a) + B*cos(a) = C.
+x_lo     = x_inner - clearance - wall;         // outer face of the inner wall
+x_hi_out = x_outer + clearance + wall;         // outer face of the outer wall
+A        = x_hi_out - x_lo;
+B        = collar_h;
+C        = inner_height - outer_gap;
+tent_deg = asin(C / sqrt(A * A + B * B)) - atan2(B, A);
+slope    = tan(tent_deg);
 
-// Plate resting plane (ledge top): z(x) = c_top - slope * x
-c_top = z_top_outer + slope * x_hi;
+// Keyboard frame: plate plane through (0, 0, c_top), rotated tent_deg about Y.
+c_top   = x_hi_out * sin(tent_deg) + collar_below * cos(tent_deg) + outer_gap;
+// Collar/pedestal joint plane, in world coords: z = c_joint - slope * x
+c_joint = c_top - collar_below / cos(tent_deg);
 
 echo(str("tent angle = ", tent_deg, " deg"));
-echo(str("outer rim height = ", z_top_outer + lip, " mm, inner rim height = ", inner_height, " mm"));
-echo(str("ledge underside slope after tilt: ", atan(tan(chamfer_angle) - slope), " to ",
-         atan(tan(chamfer_angle) + slope), " deg from horizontal"));
+echo(str("outer rim height = ", collar_h * cos(tent_deg) + outer_gap,
+         " mm, inner rim height = ", inner_height, " mm"));
+echo(str("ledge underside slope, world: ", chamfer_angle - tent_deg, " to ",
+         chamfer_angle + tent_deg, " deg from horizontal"));
+if (collar_below < ledge_t + chamfer_h)
+    echo(str("NOTE: collar_h is too small for the ledge chamfer; it gets truncated by ",
+             ledge_t + chamfer_h - collar_below, " mm. Raise collar_h or lower chamfer_angle."));
 
 BIG = 1000;
 
@@ -80,38 +97,67 @@ module pocket_profile() { offset(r = clearance) plate_outline(); }
 module outer_profile()  { offset(r = clearance + wall) plate_outline(); }
 module inside_ledge()   { offset(r = -ledge_w) pocket_profile(); }
 
-// ---------- Tilted half-spaces --------------------------------------------
+// ---------- Frames --------------------------------------------------------
 
-// Shear so that a horizontal plane z = c becomes z = c - slope * x.
-module tilted() {
+// Keyboard frame -> world.
+module frame() { translate([0, 0, c_top]) rotate([0, tent_deg, 0]) children(); }
+
+// Where a 2D shape drawn on the collar's bottom plane lands on the desk,
+// seen from above (the pedestal footprint).
+module footprint() {
+    translate([-collar_below * sin(tent_deg), 0]) scale([cos(tent_deg), 1]) children();
+}
+
+// Everything below the world plane z(x) = c - slope * x
+module below(c) {
     multmatrix([[1, 0, 0, 0],
                 [0, 1, 0, 0],
                 [-slope, 0, 1, 0],
-                [0, 0, 0, 1]]) children();
+                [0, 0, 0, 1]])
+        translate([-BIG / 2, -BIG / 2, c - BIG]) cube([BIG, BIG, BIG]);
 }
 
-// Everything below the plane z(x) = c - slope * x
-module below(c) {
-    tilted() translate([-BIG / 2, -BIG / 2, c - BIG]) cube([BIG, BIG, BIG]);
+// ---------- Collar (keyboard frame, plate plane at z = 0) -----------------
+
+module collar_frame() {
+    difference() {
+        translate([0, 0, -collar_below]) linear_extrude(collar_h) outer_profile();
+        // pocket above the plate
+        linear_extrude(BIG) pocket_profile();
+        // open middle, all the way through
+        translate([0, 0, -BIG / 2]) linear_extrude(BIG) inside_ledge();
+        // open below the ledge's sloped underside
+        translate([0, 0, -BIG - ledge_t - chamfer_h]) linear_extrude(BIG) pocket_profile();
+        // sloped underside: roof() rises at 45 deg from the pocket outline,
+        // scaling z sets the chamfer angle
+        translate([0, 0, -ledge_t - chamfer_h])
+            scale([1, 1, chamfer_h / ledge_w]) roof() pocket_profile();
+    }
 }
 
-// Everything above the plane z(x) = c - slope * x
-module above(c) {
-    tilted() translate([-BIG / 2, -BIG / 2, c]) cube([BIG, BIG, BIG]);
+// ---------- Pedestal (world frame, vertical walls) ------------------------
+
+module pedestal() {
+    difference() {
+        intersection() {
+            linear_extrude(BIG) footprint() offset(r = -border) outer_profile();
+            below(c_joint);
+        }
+        translate([0, 0, -1]) linear_extrude(BIG) footprint() offset(r = -border) pocket_profile();
+        if (pattern == "hex") wall_pattern();
+    }
 }
 
-// Tall prism of a 2D profile, starting just below the desk so cuts go through.
-module prism(h = BIG) { translate([0, 0, -1]) linear_extrude(h + 1) children(); }
-
-// ---------- Wall pattern --------------------------------------------------
+// ---------- Pedestal pattern ----------------------------------------------
 //
-// The wall is "unrolled" into (s, z) coordinates, s being distance along the
-// outline. A hex lattice is laid out in that plane, then for each chord of
-// the outline the strip of lattice over that chord is extruded through the
-// wall along the chord's outward normal.
+// The pedestal wall is "unrolled" into (s, z) coordinates, s being distance
+// along the footprint. A hex lattice is laid out in that plane, then for each
+// chord of the footprint the strip of lattice over that chord is extruded
+// through the wall along the chord's outward normal.
 
 N = len(outline_chords);
-function P(i)    = outline_chords[((i % N) + N) % N];
+function P(i) = let(q = outline_chords[((i % N) + N) % N])
+    [q[0] * cos(tent_deg) - collar_below * sin(tent_deg), q[1]];   // same map as footprint()
 function clen(i) = norm(P(i + 1) - P(i));
 function cang(i) = atan2(P(i + 1)[1] - P(i)[1], P(i + 1)[0] - P(i)[0]);
 function cum(i)  = i <= 0 ? 0 : cum(i - 1) + clen(i - 1);         // s at start of chord i
@@ -125,11 +171,11 @@ pitch_s   = perimeter / ncol;                         // adjusted so the lattice
 pitch_z   = pitch_s * sqrt(3) / 2;
 nrows     = ceil(inner_height / pitch_z) + 1;
 
+// Lower edge of the solid band under the collar, at world x.
+function z_limit(x) = c_joint - slope * x - pattern_top;
+
 // 2D: lattice holes over chord i, in the chord's local (s, z) frame, clipped
 // to the chord and kept away from sharp corners.
-// Height of the solid top band's lower edge at world x.
-function z_limit(x) = c_top - ledge_t - chamfer_h - pattern_top - slope * x;
-
 module hex_strip(i) {
     s0  = cum(i);
     L   = clen(i);
@@ -149,57 +195,31 @@ module hex_strip(i) {
         }
 }
 
-// 3D: the strip for chord i, extruded outward through the wall.
+// 3D: the strip for chord i, extruded outward through the pedestal wall.
 module wall_cutter(i) {
     A = P(i);
     translate([A[0], A[1], 0]) rotate([0, 0, cang(i)])
-        translate([0, 0.5, 0])                  // start just inside the outline
+        translate([0, border + 1, 0])           // start inside the pedestal's inner face
             rotate([90, 0, 0])                  // 2D y -> z, extrude toward the outward normal
-                linear_extrude(clearance + wall + 1.5) hex_strip(i);
+                linear_extrude(wall + clearance + 2) hex_strip(i);
 }
 
 module wall_pattern() {
     intersection() {
         union() for (i = [0 : N - 1]) wall_cutter(i);
-        // keep a solid band under the ledge's sloped underside
-        below(c_top - ledge_t - chamfer_h - pattern_top);
+        below(c_joint - pattern_top);
     }
 }
 
-// ---------- Solid ---------------------------------------------------------
+// ---------- Assembly ------------------------------------------------------
 
 module stand() {
-    difference() {
-        stand_solid();
-        if (pattern == "hex") wall_pattern();
-    }
-}
-
-module stand_solid() {
-    difference() {
-        // Outer body: wall footprint, from the desk up to the rim plane.
-        intersection() {
-            linear_extrude(BIG) outer_profile();
-            below(c_top + lip);
+    intersection() {
+        union() {
+            frame() collar_frame();
+            pedestal();
         }
-        // Pocket: the case sits here, above the ledge.
-        intersection() {
-            prism() pocket_profile();
-            above(c_top);
-        }
-        // Open middle, all the way through.
-        prism() inside_ledge();
-        // Open bottom, below the ledge's sloped underside.
-        intersection() {
-            prism() pocket_profile();
-            below(c_top - ledge_t - chamfer_h);
-        }
-        // Sloped underside of the ledge: roof() rises at 45 deg from the
-        // pocket outline; scaling z sets the chamfer angle. Everything above
-        // the ledge's inner edge is already open, so its top needs no clipping.
-        tilted() translate([0, 0, c_top - ledge_t - chamfer_h])
-            scale([1, 1, chamfer_h / ledge_w])
-                roof() pocket_profile();
+        translate([-BIG / 2, -BIG / 2, 0]) cube(BIG);   // the desk
     }
 }
 

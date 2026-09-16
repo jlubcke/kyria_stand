@@ -1,10 +1,17 @@
 # Kyria tenting stand
 
-Tenting stand for a splitkb Kyria rev3 half: a perimeter wall following the
-case outline with a small inward ledge the bottom plate rests on. No floor, no
-bottom. The ledge underside is sloped so it prints upright with no supports.
-The walls carry an optional honeycomb cut-out. Modelled in OpenSCAD from the
-official bottom-plate DXF.
+Tenting stand for a splitkb Kyria rev3 half, modelled in OpenSCAD from the
+official bottom-plate DXF. Two parts in one print:
+
+- A **collar** in the keyboard's own frame: a wall perpendicular to the bottom
+  plate, following the case outline, with a small inward ledge the plate rests
+  on and a sloped underside below it. It tilts with the keyboard, so the case
+  fits exactly at every height of the lip.
+- A **pedestal** below it with vertical walls straight down to the desk. Its
+  outer face is set in 1 mm so the collar overhangs it as a design line. The
+  pedestal carries the optional honeycomb cut-out.
+
+No floor, no bottom. Prints upright with no supports.
 
 ## Files
 
@@ -20,12 +27,14 @@ official bottom-plate DXF.
 | parameter       | value  | meaning                                   |
 | --------------- | ------ | ----------------------------------------- |
 | `inner_height`  | 50 mm  | rim height at the inner (thumb/OLED) edge |
-| `lip`           | 4 mm   | wall above the plate's resting plane      |
+| `lip`           | 4 mm   | collar wall above the plate               |
+| `collar_h`      | 11 mm  | total collar height, lip included         |
+| `border`        | 1 mm   | collar overhang beyond the pedestal wall  |
 | `wall`          | 2 mm   | wall thickness                            |
 | `clearance`     | 0.4 mm | gap between case and pocket wall          |
 | `ledge_w`       | 2.5 mm | ledge width, inward from the pocket wall  |
-| `ledge_t`       | 3 mm   | ledge thickness                           |
-| `chamfer_angle` | 55°    | slope of the ledge underside              |
+| `ledge_t`       | 2.5 mm | ledge thickness                           |
+| `chamfer_angle` | 60°    | slope of the ledge underside, vs the plate|
 | `pattern`       | "hex"  | wall cut-out: "hex" or "none"             |
 | `hex_size`      | 6 mm   | hole width, flat to flat                  |
 | `hex_strut`     | 1.6 mm | material left between holes               |
@@ -33,9 +42,13 @@ official bottom-plate DXF.
 | `pattern_top`   | 1.5 mm | solid margin below the ledge chamfer      |
 | `corner_margin` | 3 mm   | solid material either side of a corner    |
 
-Resulting tent angle is about 15°. Outer rim is 7 mm tall.
-Footprint per half: roughly 167 × 120 mm. About 26 cm³ of plastic per half
-with the hex pattern, roughly 33 cm³ without.
+Resulting tent angle is about 13.7°. Outer rim is about 11 mm tall.
+Footprint per half: roughly 164 × 119 mm. About 28 cm³ of plastic per half
+with the hex pattern.
+
+`collar_h` must be at least `lip + ledge_t + ledge_w * tan(chamfer_angle)`
+(11 mm with the defaults) or the ledge chamfer gets truncated; the model
+prints a NOTE if so.
 
 The pattern is laid out on the "unrolled" wall (distance along the outline
 versus height) and cut through each chord of the outline along that chord's
@@ -61,5 +74,6 @@ In the GUI, turn on "roof" under Preferences > Features.
 
 ## Printing
 
-Print upright, as modelled. The ledge underside slopes at 49–59° from
-horizontal after the tilt, so no supports are needed.
+Print upright, as modelled. The collar leans with the tent angle, the ledge
+underside slopes at 46–74° from horizontal, and the collar overhangs the
+pedestal by 1 mm. All of that prints without supports.
