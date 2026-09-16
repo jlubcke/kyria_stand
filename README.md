@@ -44,7 +44,7 @@ No floor, no bottom. Prints upright with no supports.
 | `voronoi_seed`  | 7      | voronoi: change for a different pattern   |
 | `pattern_foot`  | 3 mm   | solid band along the desk                 |
 | `pattern_top`   | 1.5 mm | solid margin below the ledge chamfer      |
-| `corner_margin` | 3 mm   | solid material either side of a corner    |
+| `corner_margin` | 0 mm   | solid band either side of a sharp corner; 0 lets holes wrap around corners |
 
 The tent angle follows from `inner_height`, `lip` and `ledge_t`: about 15°
 with the defaults. The ledge underside touches the desk at the outer edge, so
@@ -62,7 +62,10 @@ normal, so it flows continuously around the curves. The Voronoi variant seeds
 a jittered grid over that plane and wraps it around the loop, so it has no
 seam either; seeds stay inside their own grid cell, which keeps cell sizes
 even and rules out hairline struts. The holes run up to the
-collar, which clips the top row. Sharp corners and the desk band stay solid.
+collar, which clips the top row. Neighbouring chords' cutters meet at the
+corner's bisector plane, so holes fold around corners without gaps; set
+`corner_margin` to a few mm if you'd rather keep the corners solid. The desk
+band stays solid.
 
 Keep `ledge_w` at 3 mm or less: the case screw nearest the edge (top inner
 corner) is 5.3 mm in, and its head must clear the ledge. If your bottom plate

@@ -45,7 +45,7 @@ voronoi_seed  = 7;     // voronoi: change for a different random pattern
 pattern_foot  = 3;     // solid band along the desk (mm)
 pattern_top   = 0;     // solid margin below the collar (mm); 0 = holes run up to the collar
 min_hole_h    = 1.5;   // drop holes the collar would cut down to less than this height (mm)
-corner_margin = 3;     // solid material either side of a sharp corner (mm)
+corner_margin = 0;     // solid material either side of a sharp corner (mm); 0 = pattern wraps around corners
 corner_deg    = 20;    // turn angle that counts as a sharp corner (deg)
 
 dxf = "Kyria rev3 Bottom Plate - No Kerf.dxf";
@@ -167,8 +167,17 @@ function P(i) = let(q = outline_chords[((i % N) + N) % N])
 function clen(i) = norm(P(i + 1) - P(i));
 function cang(i) = atan2(P(i + 1)[1] - P(i)[1], P(i + 1)[0] - P(i)[0]);
 function cum(i)  = i <= 0 ? 0 : cum(i - 1) + clen(i - 1);         // s at start of chord i
-function turn(i) = let(d = cang(i) - cang(i - 1)) abs(((d + 540) % 360) - 180);  // turn at vertex i
+function sturn(i) = let(d = cang(i) - cang(i - 1)) ((d + 540) % 360) - 180;   // signed turn at vertex i
+function turn(i) = abs(sturn(i));
 function is_corner(i) = turn(i) > corner_deg;
+function margin(i) = is_corner(i) ? corner_margin : 0;
+
+// Range of s (chord-local) that chord i's cutter covers. With a margin the
+// strip stops short of the corner; otherwise it runs past the chord end and
+// the 3D mitre planes in wall_cutter() trim it, so holes fold around corners.
+hole_ext = pattern == "voronoi" ? 2 * voronoi_cell : hex_size;
+function s_lo(i) = margin(i) > 0 ? margin(i) : -hole_ext;
+function s_hi(i) = margin(i + 1) > 0 ? clen(i) - margin(i + 1) : clen(i) + hole_ext;
 
 perimeter = cum(N);
 hex_r     = hex_size / sqrt(3);                       // circumradius of a hole
@@ -184,18 +193,17 @@ function z_limit(x) = c_joint - slope * x - pattern_top;
 // to the chord and kept away from sharp corners.
 module hex_strip(i) {
     s0  = cum(i);
-    L   = clen(i);
-    a   = is_corner(i)     ? corner_margin : 0;
-    b   = is_corner(i + 1) ? corner_margin : 0;
+    lo  = s_lo(i);
+    hi  = s_hi(i);
     ang = cang(i);
-    if (L - a - b > 0.5)
+    if (hi - lo > 0.5)
         intersection() {
-            translate([a, -1]) square([L - a - b, inner_height + 2]);
-            for (j = [0 : nrows - 1], k = [-1 : ncol])
+            translate([lo, -1]) square([hi - lo, inner_height + 2]);
+            for (j = [0 : nrows - 1], k = [-2 : ncol + 1])
                 let(sc = k * pitch_s + (j % 2) * pitch_s / 2 - s0,
                     zc = pattern_foot + hex_r + j * pitch_z,
                     xw = P(i)[0] + sc * cos(ang))          // world x of the hole centre
-                if (sc > a - hex_size / 2 && sc < L - b + hex_size / 2
+                if (sc > lo - hex_size / 2 && sc < hi + hex_size / 2
                     && z_limit(xw) - (zc - hex_r) > min_hole_h)   // skip holes the collar would cut to slivers
                     translate([sc, zc]) rotate(30) circle(r = hex_r, $fn = 6);
         }
@@ -242,16 +250,15 @@ module vor_cell(p) {
 // 2D: Voronoi holes over chord i, in the chord's local (s, z) frame.
 module vor_strip(i) {
     s0  = cum(i);
-    L   = clen(i);
-    a   = is_corner(i)     ? corner_margin : 0;
-    b   = is_corner(i + 1) ? corner_margin : 0;
+    lo  = s_lo(i);
+    hi  = s_hi(i);
     ang = cang(i);
-    if (L - a - b > 0.5)
+    if (hi - lo > 0.5)
         intersection() {
-            translate([a, pattern_foot]) square([L - a - b, inner_height]);
+            translate([lo, pattern_foot]) square([hi - lo, inner_height]);
             for (p = vor_ext)
                 let(sc = p[0] - s0, zc = p[1], xw = P(i)[0] + sc * cos(ang))
-                if (sc > a - voronoi_cell && sc < L - b + voronoi_cell
+                if (sc > lo - voronoi_cell && sc < hi + voronoi_cell
                     && zc > pattern_foot + min_hole_h
                     && zc < z_limit(xw) - min_hole_h)
                     translate([-s0, 0]) vor_cell(p);
@@ -265,13 +272,23 @@ module pattern_strip(i) {
     else if (pattern == "voronoi") vor_strip(i);
 }
 
-// 3D: the strip for chord i, extruded outward through the pedestal wall.
+// 3D: the strip for chord i, extruded outward through the pedestal wall and
+// trimmed at both ends by the mitre plane (corner bisector) shared with the
+// neighbouring chord, so the two cutters meet without a gap or overlap.
 module wall_cutter(i) {
     A = P(i);
+    L = clen(i);
     translate([A[0], A[1], 0]) rotate([0, 0, cang(i)])
-        translate([0, border + 1, 0])           // start inside the pedestal's inner face
-            rotate([90, 0, 0])                  // 2D y -> z, extrude toward the outward normal
-                linear_extrude(wall + clearance + 2) pattern_strip(i);
+        intersection() {
+            translate([0, border + 1, 0])       // start inside the pedestal's inner face
+                rotate([90, 0, 0])              // 2D y -> z, extrude toward the outward normal
+                    linear_extrude(wall + clearance + 2) pattern_strip(i);
+            // keep the side of the start mitre that belongs to this chord
+            rotate([0, 0, -sturn(i) / 2]) translate([0, -BIG / 2, -BIG / 2]) cube(BIG);
+            // and the side of the end mitre
+            translate([L, 0, 0]) rotate([0, 0, sturn(i + 1) / 2])
+                translate([-BIG, -BIG / 2, -BIG / 2]) cube(BIG);
+        }
 }
 
 module wall_pattern() {
