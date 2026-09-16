@@ -35,9 +35,13 @@ chamfer_angle = 57;   // slope of the ledge underside, relative to the plate (de
 outer_gap     = 0;    // lift of the ledge underside off the desk at the outer edge (mm)
 
 // Pedestal lightening pattern.
-pattern       = "hex"; // ["none", "hex"]
-hex_size      = 6;     // hole width, flat to flat (mm)
-hex_strut     = 1.6;   // material left between holes (mm)
+pattern       = "hex"; // ["none", "hex", "voronoi"]
+hex_size      = 6;     // hex: hole width, flat to flat (mm)
+hex_strut     = 1.6;   // hex: material left between holes (mm)
+voronoi_cell  = 8;     // voronoi: mean cell size (mm)
+voronoi_strut = 1.6;   // voronoi: material left between cells (mm)
+voronoi_jitter = 0.8;  // voronoi: 0 = regular grid, 1 = fully random within the grid
+voronoi_seed  = 7;     // voronoi: change for a different random pattern
 pattern_foot  = 3;     // solid band along the desk (mm)
 pattern_top   = 0;     // solid margin below the collar (mm); 0 = holes run up to the collar
 min_hole_h    = 1.5;   // drop holes the collar would cut down to less than this height (mm)
@@ -146,7 +150,7 @@ module pedestal() {
             below(c_joint);
         }
         translate([0, 0, -1]) linear_extrude(BIG) footprint() offset(r = -border) pocket_profile();
-        if (pattern == "hex") wall_pattern();
+        if (pattern != "none") wall_pattern();
     }
 }
 
@@ -197,13 +201,77 @@ module hex_strip(i) {
         }
 }
 
+// ---------- Voronoi variant ------------------------------------------------
+//
+// Seeds sit on a jittered hex grid over the whole unrolled wall (including
+// the solid bands, so edge cells get proper neighbours). Each hole is the
+// Voronoi cell of its seed, shrunk by half a strut. Seeds near the seam are
+// mirrored across it so the pattern wraps seamlessly.
+
+vor_cols    = max(1, round(perimeter / voronoi_cell));
+vor_pitch_s = perimeter / vor_cols;
+vor_pitch_z = voronoi_cell * sqrt(3) / 2;
+vor_rows    = ceil((inner_height + 2 * voronoi_cell) / vor_pitch_z);
+vor_n       = vor_rows * vor_cols;
+vor_rand    = rands(-0.5, 0.5, 2 * vor_n, voronoi_seed);
+function vor_seed(idx) = let(j = floor(idx / vor_cols), k = idx % vor_cols)
+    [(k + (j % 2) * 0.5 + voronoi_jitter * vor_rand[2 * idx]) * vor_pitch_s,
+     -voronoi_cell + (j + voronoi_jitter * vor_rand[2 * idx + 1]) * vor_pitch_z];
+vor_seeds = [for (i = [0 : vor_n - 1]) vor_seed(i)];
+vor_reach = 2.5 * voronoi_cell;                       // neighbours farther than this can't bound a cell
+vor_ext   = concat(vor_seeds,
+                   [for (q = vor_seeds) if (q[0] < vor_reach) q + [perimeter, 0]],
+                   [for (q = vor_seeds) if (q[0] > perimeter - vor_reach) q - [perimeter, 0]]);
+function vor_neighbours(p) = [for (q = vor_ext) if (norm(q - p) > 1e-6 && norm(q - p) < vor_reach) q];
+
+// Points closer to p than to q, pulled back by half a strut.
+module half_plane(p, q) {
+    m = (p + q) / 2;
+    d = q - p;
+    translate(m) rotate(atan2(d[1], d[0]))
+        translate([-BIG - voronoi_strut / 2, -BIG / 2]) square([BIG, BIG]);
+}
+
+module vor_cell(p) {
+    intersection() {
+        translate(p - [vor_reach, vor_reach]) square(2 * vor_reach);
+        intersection_for(q = vor_neighbours(p)) half_plane(p, q);
+    }
+}
+
+// 2D: Voronoi holes over chord i, in the chord's local (s, z) frame.
+module vor_strip(i) {
+    s0  = cum(i);
+    L   = clen(i);
+    a   = is_corner(i)     ? corner_margin : 0;
+    b   = is_corner(i + 1) ? corner_margin : 0;
+    ang = cang(i);
+    if (L - a - b > 0.5)
+        intersection() {
+            translate([a, pattern_foot]) square([L - a - b, inner_height]);
+            for (p = vor_ext)
+                let(sc = p[0] - s0, zc = p[1], xw = P(i)[0] + sc * cos(ang))
+                if (sc > a - voronoi_cell && sc < L - b + voronoi_cell
+                    && zc > pattern_foot + min_hole_h
+                    && zc < z_limit(xw) - min_hole_h)
+                    translate([-s0, 0]) vor_cell(p);
+        }
+}
+
+// ---------- Cutting the pattern through the wall ----------------------------
+
+module pattern_strip(i) {
+    if (pattern == "hex") hex_strip(i);
+    else if (pattern == "voronoi") vor_strip(i);
+}
+
 // 3D: the strip for chord i, extruded outward through the pedestal wall.
 module wall_cutter(i) {
     A = P(i);
     translate([A[0], A[1], 0]) rotate([0, 0, cang(i)])
         translate([0, border + 1, 0])           // start inside the pedestal's inner face
             rotate([90, 0, 0])                  // 2D y -> z, extrude toward the outward normal
-                linear_extrude(wall + clearance + 2) hex_strip(i);
+                linear_extrude(wall + clearance + 2) pattern_strip(i);
 }
 
 module wall_pattern() {

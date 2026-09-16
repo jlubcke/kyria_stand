@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Render both halves to STL (and PNG previews) with the OpenSCAD CLI.
+#   ./build.sh                  hex pattern (default)
+#   PATTERN=voronoi ./build.sh  voronoi pattern
+#   PATTERN=none ./build.sh     plain walls
 set -euo pipefail
 cd "$(dirname "$0")"
+PATTERN="${PATTERN:-hex}"
 
 OPENSCAD="${OPENSCAD:-$(command -v openscad || true)}"
 if [ -z "$OPENSCAD" ]; then
@@ -19,8 +23,8 @@ if "$OPENSCAD" --help 2>&1 | grep -q -- '--backend'; then EXTRA="--backend=Manif
 for side in left right; do
   out="kyria_stand_${side}.stl"
   echo "== $out"
-  "$OPENSCAD" $EXTRA -o "$out" -D "side=\"$side\"" kyria_stand.scad
-  "$OPENSCAD" $EXTRA -o "kyria_stand_${side}.png" -D "side=\"$side\"" \
+  "$OPENSCAD" $EXTRA -o "$out" -D "side=\"$side\"" -D "pattern=\"$PATTERN\"" kyria_stand.scad
+  "$OPENSCAD" $EXTRA -o "kyria_stand_${side}.png" -D "side=\"$side\"" -D "pattern=\"$PATTERN\"" \
       --render --view=edges --camera=5,0,20,35,0,25,520 --viewall \
       --imgsize=1200,900 --colorscheme=Cornfield kyria_stand.scad
 done

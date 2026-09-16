@@ -35,9 +35,13 @@ No floor, no bottom. Prints upright with no supports.
 | `ledge_w`       | 2 mm   | ledge width, inward from the pocket wall  |
 | `ledge_t`       | 1.5 mm | ledge thickness                           |
 | `chamfer_angle` | 57°    | slope of the ledge underside, vs the plate|
-| `pattern`       | "hex"  | wall cut-out: "hex" or "none"             |
-| `hex_size`      | 6 mm   | hole width, flat to flat                  |
-| `hex_strut`     | 1.6 mm | material left between holes               |
+| `pattern`       | "hex"  | wall cut-out: "hex", "voronoi" or "none"  |
+| `hex_size`      | 6 mm   | hex: hole width, flat to flat             |
+| `hex_strut`     | 1.6 mm | hex: material left between holes          |
+| `voronoi_cell`  | 8 mm   | voronoi: mean cell size                   |
+| `voronoi_strut` | 1.6 mm | voronoi: material left between cells      |
+| `voronoi_jitter`| 0.8    | voronoi: 0 = regular grid, 1 = fully random |
+| `voronoi_seed`  | 7      | voronoi: change for a different pattern   |
 | `pattern_foot`  | 3 mm   | solid band along the desk                 |
 | `pattern_top`   | 1.5 mm | solid margin below the ledge chamfer      |
 | `corner_margin` | 3 mm   | solid material either side of a corner    |
@@ -54,7 +58,10 @@ angle, measured from horizontal. Keep that at 40° or more.
 
 The pattern is laid out on the "unrolled" wall (distance along the outline
 versus height) and cut through each chord of the outline along that chord's
-normal, so it flows continuously around the curves. The holes run up to the
+normal, so it flows continuously around the curves. The Voronoi variant seeds
+a jittered grid over that plane and wraps it around the loop, so it has no
+seam either; seeds stay inside their own grid cell, which keeps cell sizes
+even and rules out hairline struts. The holes run up to the
 collar, which clips the top row. Sharp corners and the desk band stay solid.
 
 Keep `ledge_w` at 3 mm or less: the case screw nearest the edge (top inner
@@ -69,6 +76,9 @@ has rubber feet near the edge, check those too.
 ```bash
 ./build.sh
 ```
+
+`PATTERN=voronoi ./build.sh` or `PATTERN=none ./build.sh` picks the wall
+pattern without editing the file.
 
 Needs OpenSCAD on the PATH (`brew install --cask openscad@snapshot`) and the
 experimental `roof()` feature, which `build.sh` enables with `--enable=roof`.
