@@ -34,6 +34,15 @@ chamfer_angle = 57;   // slope of the ledge underside, relative to the plate (de
                       // printed overhang is chamfer_angle - tent angle from horizontal; keep >= 40
 outer_gap     = 0;    // lift of the ledge underside off the desk at the outer edge (mm)
 
+// Cable notches in the collar, as ranges in the DXF's coordinates. The
+// controller strip runs along the inner edge, x -63..-30. The USB-C port
+// points at the top edge (the edge facing away from you), centred about
+// x = -42; the TRRS jack points out of the inner side edge at about y = 2.
+// Both ranges are 16 mm, so they take any plug and a few mm of misjudgement.
+notches_top   = [[-50, -34]]; // [x_from, x_to] through the top-edge wall; [] for none
+notches_side  = [[-6, 10]];   // [y_from, y_to] through the inner-edge wall; [] for none
+notch_depth   = 6;    // how far below the rim the notches go (mm); lip = down to the plate
+
 // Pedestal lightening pattern.
 pattern       = "hex"; // ["none", "hex", "voronoi"]
 hex_size      = 6;     // hex: hole width, flat to flat (mm)
@@ -138,6 +147,11 @@ module collar_frame() {
         // scaling z sets the chamfer angle
         translate([0, 0, -ledge_t - chamfer_h])
             scale([1, 1, chamfer_h / ledge_w]) roof() pocket_profile();
+        // cable notches: USB-C through the top-edge wall, TRRS through the inner wall
+        for (n = notches_top)
+            translate([n[0], 30, lip - notch_depth]) cube([n[1] - n[0], BIG, BIG]);
+        for (n = notches_side)
+            translate([-BIG - 60, n[0], lip - notch_depth]) cube([BIG, n[1] - n[0], BIG]);
     }
 }
 

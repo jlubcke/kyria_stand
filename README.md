@@ -40,6 +40,9 @@ No floor, no bottom. Prints upright with no supports.
 | `ledge_w`       | 2 mm   | ledge width, inward from the pocket wall  |
 | `ledge_t`       | 1.5 mm | ledge thickness                           |
 | `chamfer_angle` | 57°    | slope of the ledge underside, vs the plate|
+| `notches_top`   | `[[-50, -34]]` | USB-C notch(es) through the top-edge wall, as `[x_from, x_to]` in DXF coordinates; `[]` for none |
+| `notches_side`  | `[[-6, 10]]` | TRRS notch(es) through the inner-edge wall, as `[y_from, y_to]`; `[]` for none |
+| `notch_depth`   | 6 mm   | notch depth below the rim; 6 = down to the plate |
 | `pattern`       | "hex"  | wall cut-out: "hex", "voronoi" or "none"  |
 | `hex_size`      | 6 mm   | hex: hole width, flat to flat             |
 | `hex_strut`     | 1.6 mm | hex: material left between holes          |
@@ -60,6 +63,17 @@ defaults. Outer rim is about 7 mm tall. Footprint per half: roughly
 
 Printed overhang of the ledge underside is `chamfer_angle` minus the tent
 angle, measured from horizontal. Keep that at 40° or more.
+
+### Cable notches
+
+On the Kyria rev3 the controller sits in the switch-free strip along the inner
+edge (x = -63…-30 in the DXF). Its USB-C port points at the top edge, centred
+about 20 mm in from the inner corner; the TRRS jack points sideways out of the
+inner edge, level with the bottom key row. Both positions were measured off a
+photo of the assembled board, so the default notches are 16 mm wide: USB-C at
+x = -50…-34 through the top wall, TRRS at y = -6…10 through the inner wall,
+both cut down to plate level. If your cables already clear the 6 mm lip, set
+`notches_top = []` and/or `notches_side = []`.
 
 The pattern is laid out on the "unrolled" wall (distance along the outline
 versus height) and cut through each chord of the outline along that chord's
