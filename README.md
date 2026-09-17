@@ -46,7 +46,7 @@ No floor, no bottom. Prints upright with no supports.
 | `pattern`       | "hex"  | wall cut-out: "hex", "voronoi" or "none"  |
 | `hex_size`      | 6 mm   | hex: hole width, flat to flat             |
 | `hex_strut`     | 1.6 mm | hex: material left between holes          |
-| `voronoi_cell`  | 8 mm   | voronoi: mean cell size                   |
+| `voronoi_cell`  | 10 mm  | voronoi: mean cell size                   |
 | `voronoi_strut` | 1.6 mm | voronoi: material left between cells      |
 | `voronoi_jitter`| 0.8    | voronoi: 0 = regular grid, 1 = fully random |
 | `voronoi_seed`  | 7      | voronoi: change for a different pattern   |
