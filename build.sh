@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
-# Render both halves to STL (and PNG previews) with the OpenSCAD CLI.
-#   ./build.sh                  hex pattern (default)
-#   PATTERN=voronoi ./build.sh  voronoi pattern
-#   PATTERN=none ./build.sh     plain walls
+# Render every variant to STL with the OpenSCAD CLI:
+# left and right halves, for each wall pattern (plain, hex, voronoi).
+# Output: stl/kyria_stand_<pattern>_<side>.stl  ("plain" is pattern="none")
 set -euo pipefail
 cd "$(dirname "$0")"
-PATTERN="${PATTERN:-hex}"
 
 OPENSCAD="${OPENSCAD:-$(command -v openscad || true)}"
 if [ -z "$OPENSCAD" ]; then
@@ -16,16 +14,18 @@ if [ -z "$OPENSCAD" ]; then
 fi
 [ -n "$OPENSCAD" ] || { echo "openscad not found; set OPENSCAD=/path/to/openscad" >&2; exit 1; }
 
-# Manifold backend is much faster where available (2024+ nightlies).
+# roof() is experimental; the Manifold backend is much faster where available.
 EXTRA="--enable=roof"
-if "$OPENSCAD" --help 2>&1 | grep -q -- '--backend'; then EXTRA="--backend=Manifold --enable=roof"; fi
+if "$OPENSCAD" --help 2>&1 | grep -q -- '--backend'; then EXTRA="$EXTRA --backend=Manifold"; fi
 
-for side in left right; do
-  out="kyria_stand_${side}.stl"
-  echo "== $out"
-  "$OPENSCAD" $EXTRA -o "$out" -D "side=\"$side\"" -D "pattern=\"$PATTERN\"" kyria_stand.scad
-  "$OPENSCAD" $EXTRA -o "kyria_stand_${side}.png" -D "side=\"$side\"" -D "pattern=\"$PATTERN\"" \
-      --render --view=edges --camera=5,0,20,35,0,25,520 --viewall \
-      --imgsize=1200,900 --colorscheme=Cornfield kyria_stand.scad
+mkdir -p stl
+for pattern in none hex voronoi; do
+  name=$pattern; [ "$pattern" = none ] && name=plain
+  for side in left right; do
+    out="stl/kyria_stand_${name}_${side}.stl"
+    echo "== $out"
+    "$OPENSCAD" $EXTRA -o "$out" -D "side=\"$side\"" -D "pattern=\"$pattern\"" kyria_stand.scad 2>&1 \
+      | grep -E 'ECHO|WARNING|ERROR|Status' || true
+  done
 done
-ls -la kyria_stand_*.stl kyria_stand_*.png
+ls -la stl/

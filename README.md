@@ -23,9 +23,9 @@ No floor, no bottom. Prints upright with no supports.
 - `Kyria rev3 Bottom Plate - No Kerf.dxf` – case outline, imported directly
 - `kyria_outline.scad` – coarse polyline of the outline, generated; guides the wall pattern
 - `dxf2chords.py` – regenerates `kyria_outline.scad` from the DXF (only needed if the DXF changes)
-- `build.sh` – renders `kyria_stand_left.stl`, `kyria_stand_right.stl` and PNG previews
+- `build.sh` – renders all six STLs into `stl/`: left and right, for each pattern
+- `stl/kyria_stand_<pattern>_<side>.stl` – ready to slice
 - `images/` – the renders above; regenerate with `./render_images.sh`
-- `kyria_stand_*.stl` – ready to slice
 
 ## Defaults
 
@@ -85,8 +85,12 @@ has rubber feet near the edge, check those too.
 ./build.sh
 ```
 
-`PATTERN=voronoi ./build.sh` or `PATTERN=none ./build.sh` picks the wall
-pattern without editing the file.
+writes `stl/kyria_stand_{plain,hex,voronoi}_{left,right}.stl`. For a single
+variant with other parameters, call OpenSCAD directly:
+
+```bash
+openscad --enable=roof --backend=Manifold -o test.stl -D 'side="right"' -D 'pattern="hex"' -D 'hex_size=8' kyria_stand.scad
+```
 
 Needs OpenSCAD on the PATH (`brew install --cask openscad@snapshot`) and the
 experimental `roof()` feature, which `build.sh` enables with `--enable=roof`.
@@ -97,3 +101,37 @@ In the GUI, turn on "roof" under Preferences > Features.
 Print upright, as modelled. The collar leans with the tent angle, the ledge
 underside slopes at 42–72° from horizontal, and the collar overhangs the
 pedestal by 1 mm. All of that prints without supports.
+
+## How it was made
+
+Designed in a conversation with Claude Code, starting from a friend's printed
+stand and the official Kyria bottom-plate DXF, and iterated against test
+prints. The main steps:
+
+1. **Outline from the DXF.** OpenSCAD's `import()` reads the plate outline
+   directly. A grow-then-shrink `offset()` fills the five M2 screw holes so
+   the pocket has a clean floor plane.
+2. **Tray, then shell, then ledge.** The first version was a solid wedge with a
+   pocket; then an open shell with a sloped floor; then just walls with a
+   small inward ledge. The ledge underside is a chamfer made with the
+   experimental `roof()` operator, which builds a 45° "hip roof" over a 2D
+   shape. Scaling it in Z sets the chamfer angle, so the ledge prints upright
+   without supports.
+3. **Fixing the fit.** The first print was 7 mm too long along the tent
+   direction: a plate tilted by 15° spans less when seen from above, but the
+   pocket had been cut with vertical walls at full size. The fix was to build
+   the collar in the keyboard's own frame, plate horizontal and walls
+   perpendicular to it, and rotate the whole collar by the tent angle. The
+   tent angle itself is solved from the target inner height, the lip, and the
+   requirement that the ledge underside touches the desk at the outer edge.
+4. **Collar and pedestal.** Leaning walls all the way down looked odd, so the
+   tilted collar sits on a vertical-walled pedestal, set in 1 mm so the collar
+   overhangs it as a visible line. The pedestal footprint is the collar's
+   bottom outline projected onto the desk.
+5. **Wall patterns.** The pedestal wall is "unrolled" into a flat plane
+   (distance along the outline by height). A hex lattice, or a Voronoi
+   diagram of a jittered seed grid, is drawn in that plane and cut through the
+   wall one outline chord at a time, each chord along its own normal.
+   Neighbouring cutters meet at the corner bisector plane, so holes fold
+   around corners without seams. A small Python script turns the DXF arcs
+   into the chord polyline; everything else is plain OpenSCAD.
