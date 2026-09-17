@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Render every variant to STL with the OpenSCAD CLI:
 # left and right halves, for each wall pattern (plain, hex, voronoi).
-# Output: stl/kyria_stand_<pattern>_<side>.stl  ("plain" is pattern="none")
+# Output: stl/kyria_stand_<pattern>_<side>.stl  ("plain" is pattern="none"), binary STL
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -15,7 +15,7 @@ fi
 [ -n "$OPENSCAD" ] || { echo "openscad not found; set OPENSCAD=/path/to/openscad" >&2; exit 1; }
 
 # roof() is experimental; the Manifold backend is much faster where available.
-EXTRA="--enable=roof"
+EXTRA="--enable=roof --export-format=binstl"
 if "$OPENSCAD" --help 2>&1 | grep -q -- '--backend'; then EXTRA="$EXTRA --backend=Manifold"; fi
 
 mkdir -p stl

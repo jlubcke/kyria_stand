@@ -81,7 +81,8 @@ normal, so it flows continuously around the curves. The Voronoi variant seeds
 a jittered grid over that plane and wraps it around the loop, so it has no
 seam either; seeds stay inside their own grid cell, which keeps cell sizes
 even and rules out hairline struts. The holes run up to the
-collar, which clips the top row. Neighbouring chords' cutters meet at the
+collar, which clips the top row; a cell is kept whenever at least
+`min_hole_h` of it shows between the foot band and the collar. Neighbouring chords' cutters meet at the
 corner's bisector plane, so holes fold around corners without gaps; set
 `corner_margin` to a few mm if you'd rather keep the corners solid. The desk
 band stays solid.
@@ -99,11 +100,11 @@ has rubber feet near the edge, check those too.
 ./build.sh
 ```
 
-writes `stl/kyria_stand_{plain,hex,voronoi}_{left,right}.stl`. For a single
-variant with other parameters, call OpenSCAD directly:
+writes `stl/kyria_stand_{plain,hex,voronoi}_{left,right}.stl` as binary STL.
+For a single variant with other parameters, call OpenSCAD directly:
 
 ```bash
-openscad --enable=roof --backend=Manifold -o test.stl -D 'side="right"' -D 'pattern="hex"' -D 'hex_size=8' kyria_stand.scad
+openscad --enable=roof --backend=Manifold --export-format=binstl -o test.stl -D 'side="right"' -D 'pattern="hex"' -D 'hex_size=8' kyria_stand.scad
 ```
 
 Needs OpenSCAD on the PATH (`brew install --cask openscad@snapshot`) and the

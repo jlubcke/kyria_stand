@@ -21,7 +21,7 @@
 // half seen from above. "left" mirrors the whole model.
 side = "right"; // ["left", "right"]
 
-inner_height  = 50;   // total height of the rim at the inner edge, above the desk (mm)
+inner_height  = 40;   // total height of the rim at the inner edge, above the desk (mm)
 lip           = 6;    // collar wall above the plate's resting plane (mm)
 collar_extra  = 0;    // extra collar depth below the ledge chamfer (mm); 0 = as short as possible
 border        = 1;    // how far the collar overhangs the pedestal wall (mm)
@@ -261,6 +261,12 @@ module vor_cell(p) {
     }
 }
 
+// How far the cell of p extends straight up (dir = 1) or down (dir = -1) from
+// the seed: the nearest half-plane boundary crossed by the vertical through p.
+function vor_extent(p, dir) = min(concat([vor_reach],
+    [for (q = vor_neighbours(p)) let(d = q - p)
+        if (d[1] * dir > 1e-6) (norm(d) - voronoi_strut) / 2 * norm(d) / abs(d[1])]));
+
 // 2D: Voronoi holes over chord i, in the chord's local (s, z) frame.
 module vor_strip(i) {
     s0  = cum(i);
@@ -270,11 +276,14 @@ module vor_strip(i) {
     if (hi - lo > 0.5)
         intersection() {
             translate([lo, pattern_foot]) square([hi - lo, inner_height]);
+            // keep every cell that shows at least min_hole_h between the foot
+            // band and the collar, like the hex rule; the bands clip the rest
             for (p = vor_ext)
-                let(sc = p[0] - s0, zc = p[1], xw = P(i)[0] + sc * cos(ang))
+                let(sc = p[0] - s0, zc = p[1], xw = P(i)[0] + sc * cos(ang),
+                    z_bot = max(zc - vor_extent(p, -1), pattern_foot),
+                    z_top = min(zc + vor_extent(p, 1), z_limit(xw)))
                 if (sc > lo - voronoi_cell && sc < hi + voronoi_cell
-                    && zc > pattern_foot + min_hole_h
-                    && zc < z_limit(xw) - min_hole_h)
+                    && z_top - z_bot > min_hole_h)
                     translate([-s0, 0]) vor_cell(p);
         }
 }
