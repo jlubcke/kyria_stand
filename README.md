@@ -46,10 +46,11 @@ No floor, no bottom. Prints upright with no supports.
 | `pattern`       | "hex"  | wall cut-out: "hex", "voronoi" or "none"  |
 | `hex_size`      | 6 mm   | hex: hole width, flat to flat             |
 | `hex_strut`     | 1.6 mm | hex: material left between holes          |
-| `voronoi_cell`  | 10 mm  | voronoi: mean cell size                   |
-| `voronoi_strut` | 1.6 mm | voronoi: material left between cells      |
+| `voronoi_cell`  | 14 mm  | voronoi: mean cell size                   |
+| `voronoi_strut` | 1.8 mm | voronoi: material left between cells      |
 | `voronoi_jitter`| 0.8    | voronoi: 0 = regular grid, 1 = fully random |
 | `voronoi_seed`  | 7      | voronoi: change for a different pattern   |
+| `voronoi_round` | 2.5 mm | voronoi: corner radius of each cell; 0 = sharp polygons |
 | `pattern_foot`  | 3 mm   | solid band along the desk                 |
 | `pattern_top`   | 1.5 mm | solid margin below the ledge chamfer      |
 | `corner_margin` | 0 mm   | solid band either side of a sharp corner; 0 lets holes wrap around corners |
@@ -80,7 +81,9 @@ versus height) and cut through each chord of the outline along that chord's
 normal, so it flows continuously around the curves. The Voronoi variant seeds
 a jittered grid over that plane and wraps it around the loop, so it has no
 seam either; seeds stay inside their own grid cell, which keeps cell sizes
-even and rules out hairline struts. The holes run up to the
+even and rules out hairline struts. Each cell's corners are rounded by
+`voronoi_round`, which turns the polygons into pebbles and the strut junctions
+into smooth fillets. The holes run up to the
 collar, which clips the top row; a cell is kept whenever at least
 `min_hole_h` of it shows between the foot band and the collar. Neighbouring chords' cutters meet at the
 corner's bisector plane, so holes fold around corners without gaps; set

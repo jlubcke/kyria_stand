@@ -47,10 +47,11 @@ notch_depth   = 6;    // how far below the rim the notches go (mm); lip = down t
 pattern       = "hex"; // ["none", "hex", "voronoi"]
 hex_size      = 6;     // hex: hole width, flat to flat (mm)
 hex_strut     = 1.6;   // hex: material left between holes (mm)
-voronoi_cell  = 10;    // voronoi: mean cell size (mm)
-voronoi_strut = 1.6;   // voronoi: material left between cells (mm)
+voronoi_cell  = 14;    // voronoi: mean cell size (mm)
+voronoi_strut = 1.8;   // voronoi: material left between cells (mm)
 voronoi_jitter = 0.8;  // voronoi: 0 = regular grid, 1 = fully random within the grid
 voronoi_seed  = 7;     // voronoi: change for a different random pattern
+voronoi_round = 2.5;   // voronoi: corner radius of each cell (mm); 0 = sharp polygons
 pattern_foot  = 3;     // solid band along the desk (mm)
 pattern_top   = 0;     // solid margin below the collar (mm); 0 = holes run up to the collar
 min_hole_h    = 1.5;   // drop holes the collar would cut down to less than this height (mm)
@@ -254,11 +255,16 @@ module half_plane(p, q) {
         translate([-BIG - voronoi_strut / 2, -BIG / 2]) square([BIG, BIG]);
 }
 
+// Shrinking then growing by voronoi_round rounds the convex corners of the
+// (convex) cell, so the struts meet in smooth fillets. Cells narrower than
+// 2 * voronoi_round vanish, which is fine: they would be slivers anyway.
+// Few segments per arc keep the STL small.
 module vor_cell(p) {
-    intersection() {
-        translate(p - [vor_reach, vor_reach]) square(2 * vor_reach);
-        intersection_for(q = vor_neighbours(p)) half_plane(p, q);
-    }
+    offset(r = voronoi_round, $fn = 16) offset(delta = -voronoi_round)
+        intersection() {
+            translate(p - [vor_reach, vor_reach]) square(2 * vor_reach);
+            intersection_for(q = vor_neighbours(p)) half_plane(p, q);
+        }
 }
 
 // How far the cell of p extends straight up (dir = 1) or down (dir = -1) from
