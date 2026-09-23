@@ -165,7 +165,9 @@ module pedestal() {
             below(c_joint);
         }
         translate([0, 0, -1]) linear_extrude(BIG) footprint() offset(r = -border) pocket_profile();
-        if (pattern != "none") wall_pattern();
+        // render() turns the pattern's huge CSG tree into one mesh first, so
+        // the GUI preview (F5) works instead of aborting on tree size
+        if (pattern != "none") render() wall_pattern();
     }
 }
 

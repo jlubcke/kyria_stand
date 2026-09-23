@@ -17,6 +17,12 @@ No floor, no bottom. Prints upright with no supports.
 | :---: | :---: | :---: |
 | ![plain walls](images/pattern_none.png) | ![hex pattern](images/pattern_hex.png) | ![voronoi pattern](images/pattern_voronoi.png) |
 
+Printed:
+
+| hex, both halves | voronoi, left half |
+| :---: | :---: |
+| ![printed stands with hex pattern](images/printed_hex.jpg) | ![printed stand with voronoi pattern](images/printed_voronoi.jpg) |
+
 ## Files
 
 - `kyria_stand.scad` – the model, all parameters at the top
@@ -25,7 +31,7 @@ No floor, no bottom. Prints upright with no supports.
 - `dxf2chords.py` – regenerates `kyria_outline.scad` from the DXF (only needed if the DXF changes)
 - `build.sh` – renders all six STLs into `stl/`: left and right, for each pattern
 - `stl/kyria_stand_<pattern>_<side>.stl` – ready to slice
-- `images/` – the renders above; regenerate with `./render_images.sh`
+- `images/` – the renders above (regenerate with `./render_images.sh`) and photos of printed stands
 
 ## Defaults
 
@@ -112,7 +118,9 @@ openscad --enable=roof --backend=Manifold --export-format=binstl -o test.stl -D 
 
 Needs OpenSCAD on the PATH (`brew install --cask openscad@snapshot`) and the
 experimental `roof()` feature, which `build.sh` enables with `--enable=roof`.
-In the GUI, turn on "roof" under Preferences > Features.
+In the GUI, turn on "roof" under Preferences > Features, and pick Manifold as
+the backend under Preferences > Advanced > 3D Rendering; the preview (F5) then
+takes a few seconds because the wall pattern is pre-rendered to a mesh.
 
 ## Printing
 
